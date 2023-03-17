@@ -3,16 +3,24 @@ package model
 import (
 	"time"
 
-	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
+	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	database "github.com/redhatinsights/ros-ocp-backend/internal/db"
 )
 
 type Cluster struct {
-	ID             uint `gorm:"primaryKey;not null;autoIncrement"`
-	TenantID       uint
-	RHAccount      RHAccount `gorm:"foreignKey:TenantID"`
-	ClusterID      string    `gorm:"type:text;unique"`
-	LastReportedAt time.Time
+	ID                uint `gorm:"primaryKey;not null;autoIncrement"`
+	TenantID          uint
+	RHAccount         RHAccount `gorm:"foreignKey:TenantID" json:"-"`
+	ClusterID		  string
+	ClusterName       string    `gorm:"type:text;unique"`
+	LastReportedAt    time.Time
+	LastReportedAtStr string    `gorm:"-"`
+}
+
+func (c *Cluster) AfterFind(tx *gorm.DB) error {
+	c.LastReportedAtStr = c.LastReportedAt.Format(time.RFC3339)
+	return nil
 }
 
 func (c *Cluster) CreateCluster() error {

@@ -60,3 +60,9 @@ local-upload-data:
 
 upload-msg-to-rosocp:
 	echo ${ros_ocp_msg} | docker-compose -f scripts/docker-compose.yml exec -T kafka kafka-console-producer --topic hccm.ros.events  --broker-list localhost:29092
+
+
+get-recommendations:
+	curl -H "x-rh-identity: ${b64_identity}" \
+		 -H "x-rh-request_id: testtesttest" \
+		 http://localhost:8088/api/cost-management/v1/recommendations/openshift/
