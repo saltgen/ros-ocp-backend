@@ -11,11 +11,11 @@ CREATE TABLE IF NOT EXISTS workloads(
    metrics_upload_at TIMESTAMP WITH TIME ZONE
 );
 
+CREATE INDEX idx_workloads_containers ON workloads USING gin(containers);
+
 ALTER TABLE workloads
 ADD CONSTRAINT fk_workloads_cluster FOREIGN KEY (cluster_id) REFERENCES clusters (id)
 ON DELETE CASCADE;
-
-CREATE INDEX idx_workloads_containers ON workloads USING gin(containers);
 
 ALTER TABLE workloads
 ADD UNIQUE (cluster_id, experiment_name);

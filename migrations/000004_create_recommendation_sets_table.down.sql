@@ -1,1 +1,2 @@
+DROP INDEX IF EXISTS idx_recommendation_sets_workload_id_container_name_end_time;
 DROP TABLE IF EXISTS recommendation_sets;

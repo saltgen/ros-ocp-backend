@@ -7,6 +7,9 @@ CREATE TABLE IF NOT EXISTS clusters(
    last_reported_at TIMESTAMP WITH TIME ZONE
 );
 
+CREATE INDEX idx_clusters_tenant_id ON clusters (tenant_id);
+CREATE INDEX idx_clusters_last_reported ON clusters (last_reported_at);
+
 ALTER TABLE clusters
 ADD CONSTRAINT fk_clusters_rh_account FOREIGN KEY (tenant_id) REFERENCES rh_accounts (id)
 ON DELETE CASCADE;
