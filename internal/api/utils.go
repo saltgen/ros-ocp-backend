@@ -102,7 +102,7 @@ func MapQueryParameters(c echo.Context) map[string][]string {
 		}
 	}
 	startDateSlice := append(dateSlice, startDate.Format("2006-01-02"))
-	queryParams["DATE(recommendation_sets.monitoring_start_time) >= ?"] = startDateSlice
+	queryParams["DATE(latest_recomms.monitoring_start_time) >= ?"] = startDateSlice
 
 	endDateStr := c.QueryParam("end_date")
 	var endDate time.Time
@@ -117,7 +117,7 @@ func MapQueryParameters(c echo.Context) map[string][]string {
 	}
 	endDateSlice := append(dateSlice, endDate.Format("2006-01-02"))
 
-	queryParams["DATE(recommendation_sets.monitoring_end_time) <= ?"] = endDateSlice
+	queryParams["DATE(latest_recomms.monitoring_end_time) <= ?"] = endDateSlice
 
 	clusters := c.QueryParams()["cluster"]
 	if len(clusters) > 0 {
@@ -163,7 +163,7 @@ func parseQueryParams(param string, values []string) (string, []string) {
 		"workload_type": "workloads.workload_type = ?",
 		"workload":      "workloads.workload_name ILIKE ?",
 		"project":       "workloads.namespace ILIKE ?",
-		"container":     "recommendation_sets.container_name ILIKE ?",
+		"container":     "latest_recomms.container_name ILIKE ?",
 	}
 
 	if len(values) > 1 {

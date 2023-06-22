@@ -24,7 +24,7 @@ func GetRecommendationSetList(c echo.Context) error {
 			"workload_type": "workloads.workload_type",
 			"workload":      "workloads.workload_name",
 			"project":       "workloads.namespace",
-			"container":     "recommendation_sets.container_name",
+			"container":     "latest_recomms.container_name",
 			"last_reported": "clusters.last_reported_at",
 		}
 		orderByOption, keyError := orderByOptions[orderBy]

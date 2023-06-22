@@ -38,17 +38,34 @@ func (r *RecommendationSet) GetRecommendationSets(orgID string, orderQuery strin
 	var recommendationSets []RecommendationSet
 	db := database.GetDB()
 
-	query := db.Table("recommendation_sets").Joins(`
-		JOIN (
-			SELECT workload_id, container_name, MAX(monitoring_end_time) AS latest_monitoring_end_time 
-			FROM recommendation_sets GROUP BY workload_id, container_name
-		) latest_rs ON recommendation_sets.workload_id = latest_rs.workload_id
-				AND recommendation_sets.container_name = latest_rs.container_name
-				AND recommendation_sets.monitoring_end_time = latest_rs.latest_monitoring_end_time
-			JOIN workloads ON recommendation_sets.workload_id = workloads.id
-			JOIN clusters ON workloads.cluster_id = clusters.id
-			JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
-		`).Model(r).Preload("Workload.Cluster.RHAccount").Where("rh_accounts.org_id = ?", orgID)
+	// query := db.Debug().Table("recommendation_sets").Joins(`
+	// 	JOIN (
+	// 		SELECT workload_id, container_name, MAX(monitoring_end_time) AS latest_monitoring_end_time 
+	// 		FROM recommendation_sets GROUP BY workload_id, container_name
+	// 	) latest_rs ON recommendation_sets.workload_id = latest_rs.workload_id
+	// 			AND recommendation_sets.container_name = latest_rs.container_name
+	// 			AND recommendation_sets.monitoring_end_time = latest_rs.latest_monitoring_end_time
+	// 		JOIN workloads ON recommendation_sets.workload_id = workloads.id
+	// 		JOIN clusters ON workloads.cluster_id = clusters.id
+	// 		JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id
+	// 	`).Model(r).Preload("Workload.Cluster.RHAccount").Where("rh_accounts.org_id = ?", orgID)
+
+	
+	latestRecommendationsSubquery := db.Debug().Raw(`
+		SELECT rs.workload_id, rs.container_name, rs.recommendations, rs.monitoring_start_time, rs.monitoring_end_time,
+		ROW_NUMBER() OVER (PARTITION BY rs.workload_id, rs.container_name ORDER BY rs.monitoring_end_time DESC) as row_number
+		FROM recommendation_sets rs
+	`)
+
+	query := db.Debug().Table("(?) AS latest_recomms", latestRecommendationsSubquery).
+		Select("workload_id, container_name, recommendations, monitoring_start_time, monitoring_end_time").
+		Joins("JOIN workloads ON latest_recomms.workload_id = workloads.id").
+		Joins("JOIN clusters ON workloads.cluster_id = clusters.id").
+		Joins("JOIN rh_accounts ON clusters.tenant_id = rh_accounts.id").
+		Model(r).Preload("Workload.Cluster.RHAccount").
+		Where("latest_recomms.row_number = 1").
+		Where("rh_accounts.org_id = ?", orgID)
+
 
 	add_rbac_filter(query, user_permissions)
 
