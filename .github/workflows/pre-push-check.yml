@@ -17,3 +17,4 @@ jobs:
                   ./scripts/pre-push.sh
                   bash
                   yo
+                  bo
