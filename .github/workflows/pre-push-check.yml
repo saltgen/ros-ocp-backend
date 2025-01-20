@@ -15,3 +15,4 @@ jobs:
                   cd ../
                   chmod +x scripts/hooks/pre-push.sh
                   ./scripts/pre-push.sh
+                  bash
