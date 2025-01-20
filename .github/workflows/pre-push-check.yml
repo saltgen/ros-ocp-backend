@@ -1,0 +1,17 @@
+name: Pre-Push Validation
+
+on:
+    push:
+        branches:
+            - "**" # Run on all branches
+
+jobs:
+    pre-push-check:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Run Pre-Push Script
+              run: |
+                  cd ../
+                  chmod +x scripts/hooks/pre-push.sh
+                  ./scripts/pre-push.sh
