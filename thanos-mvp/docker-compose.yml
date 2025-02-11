@@ -1,0 +1,102 @@
+version: "3.8"
+services:
+    minio:
+        image: minio/minio:RELEASE.2024-12-18T13-15-44Z
+        command: server --console-address ":9001" /data
+        volumes:
+            - "./minio-conf/:/root/.minio"
+            - "./minio-data/:/data"
+        ports:
+            - 9000:9000
+            - 9001:9001
+        environment:
+            - MINIO_ACCESS_KEY=$MINIO_ACCESS_KEY
+            - MINIO_SECRET_KEY=$MINIO_SECRET_KEY
+
+    createbuckets:
+        image: minio/mc:latest
+        depends_on:
+            - minio
+        entrypoint: >
+            /bin/sh -c "
+            /usr/bin/mc config host add myminio http://minio:9000 $MINIO_ACCESS_KEY $MINIO_SECRET_KEY;
+            /usr/bin/mc mb myminio/rosocp-tsdb;
+            /usr/bin/mc policy download myminio/rosocp-tsdb;
+            exit 0;
+            "
+
+    thanos-store-gateway:
+        image: quay.io/thanos/thanos:v0.36.0
+        depends_on:
+            - minio
+        command:
+            - "store"
+            - "--log.level=debug"
+            - "--log.format=logfmt"
+            - "--data-dir=/tmp/"
+            - "--http-address=0.0.0.0:19191"
+            - "--grpc-address=0.0.0.0:19090"
+            - "--sync-block-duration=1s"
+            - "--objstore.config-file=/bucket_config.yaml"
+        volumes:
+            - "./bucket_config.yaml:/bucket_config.yaml"
+
+    thanos-querier:
+        image: quay.io/thanos/thanos:v0.36.0
+        depends_on:
+            - minio
+        command:
+            - "query"
+            - "--http-address=0.0.0.0:19192"
+            - "--log.level=debug"
+            - "--log.format=logfmt"
+            - "--store=thanos-store-gateway:19090"
+        ports:
+            - 19192:19192
+
+    db-kruize:
+        image: postgres
+        restart: always
+        environment:
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_USER: postgres
+            POSTGRES_DB: postgres
+
+    kruize-autotune:
+        image: quay.io/vinakuma/autotune_operator:shk4
+        volumes:
+            - ./cdappconfig.json:/tmp/cdappconfig.json:Z
+            - ./datasource.json:/tmp/datasource.json:Z
+        ports:
+            - 8080:8080
+        environment:
+            - LOGGING_LEVEL=debug
+            - ROOT_LOGGING_LEVEL=error
+            - DB_CONFIG_FILE=/tmp/cdappconfig.json
+            - KRUIZE_CONFIG_FILE=/tmp/datasource.json
+            - dbdriver=jdbc:postgresql://
+            - database_name=postgres
+            - clustertype=kubernetes
+            - k8stype=openshift
+            - authtype=""
+            - monitoringagent=prometheus
+            - monitoringservice=prometheus-k8s
+            - monitoringendpoint=prometheus-k8s
+            - savetodb=true
+            - LOG_ALL_HTTP_REQ_AND_RESPONSE=true
+            - hibernate_dialect=org.hibernate.dialect.PostgreSQLDialect
+            - hibernate_driver=org.postgresql.Driver
+            - hibernate_c3p0minsize=2
+            - hibernate_c3p0maxsize=5
+            - hibernate_c3p0timeout=300
+            - hibernate_c3p0maxstatements=100
+            - hibernate_hbm2ddlauto=none
+            - hibernate_showsql=false
+            - hibernate_timezone=UTC
+            - plots=true
+            - datasource=[{"name":"thanos","provider":"prometheus","url":"http://thanos-querier:19192","serviceName":"","namespace":""}]
+            - recommendationsURL=http://127.0.0.1:8080/generateRecommendations?experiment_name=%s
+            - experimentsURL=http://127.0.0.1:8080/createExperiment
+        depends_on:
+            - db-kruize
+            - thanos-querier
