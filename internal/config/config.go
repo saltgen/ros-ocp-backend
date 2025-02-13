@@ -68,6 +68,12 @@ type Config struct {
 	// Sources-api-go config
 	SourceApiBaseUrl string `mapstructure:"SOURCES_API_BASE_URL"`
 	SourceApiPrefix  string `mapstructure:"SOURCES_API_PREFIX"`
+
+	// Redis
+	RedisHost     string `mapstructure:"REDIS_HOST"`
+	RedisPort     string `mapstructure:"REDIS_PORT"`
+	RedisUsername string `mapstructure:"REDIS_USERNAME"`
+	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
 }
 
 var cfg *Config = nil
@@ -131,6 +137,12 @@ func initConfig() {
 		// prometheus config
 		viper.SetDefault("PROMETHEUS_PORT", c.MetricsPort)
 
+		// redis
+		viper.SetDefault("REDIS_HOST", c.InMemoryDb.Hostname)
+		viper.SetDefault("REDIS_PORT", c.InMemoryDb.Port)
+		viper.SetDefault("REDIS_USERNAME", c.InMemoryDb.Username)
+		viper.SetDefault("REDIS_PASSWORD", c.InMemoryDb.Password)
+
 	} else {
 		viper.SetDefault("LogFormater", "text")
 
@@ -159,6 +171,12 @@ func initConfig() {
 
 		// Sources-api-go
 		viper.SetDefault("SOURCES_API_BASE_URL", "http://127.0.0.1:8002")
+
+		// redis
+		viper.SetDefault("REDIS_HOST", "localhost")
+		viper.SetDefault("REDIS_PORT", "6379")
+		viper.SetDefault("REDIS_USERNAME", "")
+		viper.SetDefault("REDIS_PASSWORD", "")
 
 	}
 

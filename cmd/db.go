@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -39,11 +40,42 @@ var migrateUp = &cobra.Command{
 	Short: "Forward database migration",
 	Long:  "Forward database migration",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Forward database migration")
 		m := getMigrateInstance()
-		err := m.Up()
-		if err != nil {
-			fmt.Println(err)
+		ctx := context.Background()
+		shouldMigrate := getMigrationStatus(m, ctx)
+		if shouldMigrate {
+			migrationLockKey := "migration_status_lock"
+			lockTTL := 1 * time.Minute
+			locked, err := redisClient.SetNX(ctx, migrationLockKey, "locked", lockTTL).Result()
+			if err != nil {
+				log.Fatalf("failed to acquire migration status lock: %v", err)
+				os.Exit(1)
+			}
+			if !locked {
+				log.Info("another instance is updating migration status, skipping...")
+				os.Exit(0)
+			}
+			defer redisClient.Del(ctx, migrationLockKey)
+			if err := m.Up(); err != nil {
+				log.Errorf("unable to apply migrations: %v", err)
+			} else {
+				version, dirty, err := m.Version()
+				migrationStatus := MigrationStatus{
+					Version: version,
+					Dirty:   dirty,
+					Err:     err,
+				}
+
+				migrationStatusJSON, err := json.Marshal(migrationStatus)
+				if err != nil {
+					log.Errorf("failed to serialize migration status data: %v", err)
+				}
+
+				redisSetErr := redisClient.SetNX(ctx, "migration_status", migrationStatusJSON, time.Minute*10).Err()
+				if err != nil {
+					log.Errorf("failed to cache migration status: %v", redisSetErr)
+				}
+			}
 		}
 	},
 }
@@ -381,7 +413,6 @@ var seedCmd = &cobra.Command{
 			UpdatedAt:           time.Now(),
 		}
 		db.Where(&model.RecommendationSet{ContainerName: "redis"}).FirstOrCreate(&recommendationSet5)
-
 	},
 }
 
