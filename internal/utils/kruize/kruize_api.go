@@ -47,7 +47,6 @@ func Create_kruize_experiments(experiment_name string, cluster_identifier string
 	url := cfg.KruizeUrl + "/createExperiment"
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal payload to json: %v", err)
-
 	}
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(payload))
 	if err != nil {
@@ -162,7 +161,7 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
-	log.Debugf("\nResponse from /updateRecommendations - %s \n", string(body))
+	log.Infof("\nResponse from /updateRecommendations - %s \n", string(body))
 	if res.StatusCode == 400 {
 		data := map[string]interface{}{}
 		if err := json.Unmarshal(body, &data); err != nil {
@@ -176,11 +175,9 @@ func Update_recommendations(experiment_name string, interval_end_time time.Time)
 	}
 
 	return response, nil
-
 }
 
 func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experiment_name string, maxEndTime time.Time) bool {
-
 	validRecommendationCode := "111000"
 	_, recommendationIsValid := recommendation.Notifications[validRecommendationCode]
 	if recommendationIsValid {
@@ -199,7 +196,6 @@ func Is_valid_recommendation(recommendation kruizePayload.Recommendation, experi
 }
 
 func Delete_experiment_from_kruize(experiment_name string) {
-
 	deletion_err_log := func(err error) {
 		kruizeAPIException.WithLabelValues("/deleteExperiment").Inc()
 		log.Errorf("error occured while deleting experiment: %s. Error - %s", experiment_name, err)
